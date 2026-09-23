@@ -53,7 +53,7 @@ public class Main {
                 String texto,
                 List<TextPosition> posicoes
         ) throws IOException {
-
+            //Vini gay
             for (TextPosition textPosition : posicoes) {
 
                 float y = textPosition.getYDirAdj();
