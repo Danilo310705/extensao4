@@ -19,10 +19,10 @@ public class Main {
         File arquivo = new File(
             "C:\\Users\\Usuario\\Desktop\\codigos da univer\\periodo 4\\Back-end\\TEXTE.pdf");
 
-        //aqui eu estou usando o Loader para ler o arquivo, e ja verifico se ele é pdf com try
+        //aqui eu irei usar o Loader para ler o arquivo, e já verifico se ele é pdf com try
         try(PDDocument documentoPDF = Loader.loadPDF(arquivo)){
             // o PDFTextStripper eu uso para retirar o texto do pdf,
-            // IMPORTANTE: se a escrita estiver em uma imagem ele NÃO consegue ler
+            // IMPORTANTE: se a escrita estiver numa imagem ele NÃO consegue ler
             PDFTextStripper removedorDeTexto = new PDFTextStripper();
 
             //aqui ele vai tentar ordenar o texto da esquerda para a direita e de cima para baixo
@@ -66,4 +66,4 @@ public class Main {
             super.writeString(texto, posicoes);
         }
     }
-}
+}//teste linha 69
