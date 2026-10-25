@@ -64,7 +64,7 @@ public class Main {
                         celulaExcel.setCellValue(dadosLinha.get(j));
                     }
                 }
-                
+
                 try (FileOutputStream saida = new FileOutputStream("teste.xlsx")) {
                     excel.write(saida);
                 }
