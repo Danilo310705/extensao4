@@ -5,12 +5,23 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.apache.pdfbox.text.TextPosition;
-import technology.tabula.TextStripper;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
+
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Cell;
+import java.io.FileOutputStream;
 
 //TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
 // click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
@@ -34,6 +45,29 @@ public class Main {
 
             for (ArrayList<String> linha : removedorDeTexto.getLinhas()) {
                 System.out.println(linha);
+            }
+
+            try (XSSFWorkbook excel = new XSSFWorkbook()) {
+
+                Sheet aba = excel.createSheet("Dados do PDF");
+
+                for (int i = 0; i < removedorDeTexto.getLinhas().size(); i++) {
+
+                    ArrayList<String> dadosLinha = removedorDeTexto.getLinhas().get(i);
+
+                    Row linhaExcel = aba.createRow(i);
+
+                    for (int j = 0; j < dadosLinha.size(); j++) {
+
+                        Cell celulaExcel = linhaExcel.createCell(j);
+
+                        celulaExcel.setCellValue(dadosLinha.get(j));
+                    }
+                }
+                
+                try (FileOutputStream saida = new FileOutputStream("teste.xlsx")) {
+                    excel.write(saida);
+                }
             }
 
         }catch (Exception e){
