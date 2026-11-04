@@ -8,7 +8,7 @@ import org.apache.pdfbox.text.TextPosition;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-
+import br.unipar.model.CelulaPDF;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import javax.swing.JFileChooser;
 import javax.swing.filechooser.FileNameExtensionFilter;
+
 
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -179,6 +180,7 @@ public class Main {
         private ArrayList<Float> posicoesDasCelulas = new ArrayList<>();
         private ArrayList<ArrayList<Float>> linhasDePosicoes = new ArrayList<>();
         private float xInicioCelula = -1;
+        private ArrayList<CelulaPDF> celulasPDF = new ArrayList<>();
 
 
         @Override
@@ -198,6 +200,9 @@ public class Main {
                 List<TextPosition> posicoes
         ) throws IOException {
 
+            int paginaAtual = getCurrentPageNo();
+
+            System.out.println("Processando texto da página: " + paginaAtual);
 
             for (TextPosition textPosition : posicoes) {
 
@@ -382,6 +387,9 @@ public class Main {
 
             return larguras;
         }
+        public ArrayList<CelulaPDF> getCelulasPDF() {
+            return celulasPDF;
+        }
     }
 
     private static boolean verificardorDeNumero(String texto) {
@@ -398,4 +406,7 @@ public class Main {
             return false;
         }
     }
+
+
+
 }//teste linha 69
