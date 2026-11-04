@@ -182,6 +182,11 @@ public class Main {
         private float xInicioCelula = -1;
         private ArrayList<CelulaPDF> celulasPDF = new ArrayList<>();
 
+        private float yInicioCelula = -1;
+        private float xFimCelula = -1;
+        private float alturaCelula = 0;
+        private int paginaCelula = 1;
+
 
         @Override
         protected void endPage(PDPage pagina) throws IOException {
@@ -236,9 +241,23 @@ public class Main {
 
 
                 if (celula.length() == 0) {
+
                     xInicioCelula = x;
+                    yInicioCelula = yAtual;
+                    paginaCelula = getCurrentPageNo();
+
+                    alturaCelula = 0;
+                    xFimCelula = x;
                 }
+
                 celula.append(caractere);// Adiciona o caractere à célula atual
+
+                xFimCelula = Math.max(xFimCelula, x + largura);
+
+                alturaCelula = Math.max(
+                        alturaCelula,
+                        textPosition.getHeightDir()
+                );
 
                 //System.out.println("Texto: " + caractere + " X: " + x + " Y: " + yAtual );
                 //System.out.println("Texto: " + caractere + " Y: " + yAtual );
