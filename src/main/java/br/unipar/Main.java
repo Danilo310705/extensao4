@@ -61,29 +61,23 @@ public class Main {
 
             // remove o texto
             String textoRemovido = removedorDeTexto.getText(documentoPDF);
-            for (int i = 0; i < removedorDeTexto.getLinhas().size(); i++) {
+
+            ArrayList<CelulaPDF> blocos =
+                    removedorDeTexto.agruparEmBlocos();
+
+            float larguraColuna = 10f;
+            float alturaLinha = 14f;
+
+            for (CelulaPDF bloco : blocos) {
+
+                int colunaExcel = (int) (bloco.getX() / larguraColuna);
+                int linhaExcel = (int) (bloco.getY() / alturaLinha);
 
                 System.out.println(
-                        "Textos: " + removedorDeTexto.getLinhas().get(i)
+                        "Texto: " + bloco.getTexto()
+                                + " | Linha Excel: " + linhaExcel
+                                + " | Coluna Excel: " + colunaExcel
                 );
-
-                System.out.println(
-                        "Posições: " + removedorDeTexto.getLinhasDePosicoes().get(i)
-                );
-            }
-            for (ArrayList<String> linha : removedorDeTexto.getLinhas()) {
-                System.out.println(linha);
-            }
-            ArrayList<Float> colunas = removedorDeTexto.descobrirColunas();
-
-            System.out.println("Colunas encontradas: " + colunas);
-
-            System.out.println("Quantidade de colunas: " + colunas.size());
-
-            System.out.println("LINHAS ORGANIZADAS:");
-
-            for (ArrayList<String> linha : removedorDeTexto.organizarLinhas()) {
-                System.out.println(linha);
             }
 
             try (XSSFWorkbook excel = new XSSFWorkbook()) {
@@ -181,6 +175,7 @@ public class Main {
         private ArrayList<ArrayList<Float>> linhasDePosicoes = new ArrayList<>();
         private float xInicioCelula = -1;
         private ArrayList<CelulaPDF> celulasPDF = new ArrayList<>();
+        private ArrayList<CelulaPDF> caracteresPDF = new ArrayList<>();
 
         private float yInicioCelula = -1;
         private float xFimCelula = -1;
@@ -213,6 +208,18 @@ public class Main {
 
                 String caractere = textPosition.getUnicode();//getUnicode pega o valor
 
+                // Guarda o caractere com sua posição original
+                CelulaPDF novoCaractere = new CelulaPDF(
+                        caractere,
+                        textPosition.getXDirAdj(),
+                        textPosition.getYDirAdj(),
+                        textPosition.getWidthDirAdj(),
+                        textPosition.getHeightDir(),
+                        getCurrentPageNo()
+                );
+
+                caracteresPDF.add(novoCaractere);
+
                 float yAtual = textPosition.getYDirAdj();//getYDirAdj vai pegar o Y
                 float x = textPosition.getXDirAdj();//getYDirAdj vai pegar o x
 
@@ -232,7 +239,7 @@ public class Main {
                     float distancia = x - xFinalAnterior;
                     //System.out.println("distancia" + distancia);
 
-                    if (distancia > 10) {
+                    if (distancia > 10 || distancia < -2) {
 //                        System.out.println("Célula: " + celula);
                         finalizarCelula();
 
@@ -276,8 +283,29 @@ public class Main {
                 tabelaDeCelulas.add(celula.toString());
                 posicoesDasCelulas.add(xInicioCelula);
 
+                // Calcula a largura ocupada pelo texto
+                float larguraTotal = xFimCelula - xInicioCelula;
+
+                // Cria o objeto com todas as informações
+                CelulaPDF novaCelula = new CelulaPDF(
+                    celula.toString(),
+                    xInicioCelula,
+                    yInicioCelula,
+                    larguraTotal,
+                    alturaCelula,
+                    paginaCelula
+                );
+
+                // Guardo o objeto na lista
+                celulasPDF.add(novaCelula);
+
+                // Limpo as variáveis para a próxima célula
                 celula.setLength(0);
                 xInicioCelula = -1;
+                yInicioCelula = -1;
+                xFimCelula = -1;
+                alturaCelula = 0;
+
             }
 
         }
@@ -381,9 +409,6 @@ public class Main {
             return linhasOrganizadas;
         }
 
-        public ArrayList<ArrayList<Float>> getLinhasDePosicoes() {
-            return linhasDePosicoes;
-        }
 
         public ArrayList<Float> calcularLargurasCelulas() {
 
@@ -406,9 +431,149 @@ public class Main {
 
             return larguras;
         }
+        public ArrayList<ArrayList<CelulaPDF>> agruparPorLinha() {
+
+            ArrayList<ArrayList<CelulaPDF>> linhas = new ArrayList<>();
+
+            float toleranciaY = 2f;
+
+            for (CelulaPDF caractere : caracteresPDF) {
+
+                boolean encontrouLinha = false;
+
+                for (ArrayList<CelulaPDF> linha : linhas) {
+
+                    float yReferencia = linha.get(0).getY();
+
+                    if (Math.abs(caractere.getY() - yReferencia) <= toleranciaY) {
+
+                        linha.add(caractere);
+                        encontrouLinha = true;
+                        break;
+                    }
+                }
+
+                if (!encontrouLinha) {
+
+                    ArrayList<CelulaPDF> novaLinha = new ArrayList<>();
+
+                    novaLinha.add(caractere);
+
+                    linhas.add(novaLinha);
+                }
+            }
+
+            // Organiza as linhas por página e posição vertical
+            linhas.sort((linha1, linha2) -> {
+
+                CelulaPDF primeiro1 = linha1.get(0);
+                CelulaPDF primeiro2 = linha2.get(0);
+
+                int comparacaoPagina = Integer.compare(
+                        primeiro1.getPagina(),
+                        primeiro2.getPagina()
+                );
+
+                if (comparacaoPagina != 0) {
+                    return comparacaoPagina;
+                }
+
+                return Float.compare(primeiro1.getY(), primeiro2.getY());
+            });
+
+            // Organiza os elementos de cada linha da esquerda para a direita
+            for (ArrayList<CelulaPDF> linha : linhas) {
+
+                linha.sort((a, b) ->
+                        Float.compare(a.getX(), b.getX())
+                );
+            }
+
+            return linhas;
+        }
+
+        public ArrayList<CelulaPDF> agruparEmBlocos() {
+
+            ArrayList<CelulaPDF> blocos = new ArrayList<>();
+
+            ArrayList<ArrayList<CelulaPDF>> linhas = agruparPorLinha();
+
+            float toleranciaEspaco = 10f;
+
+            for (ArrayList<CelulaPDF> linha : linhas) {
+
+                StringBuilder textoBloco = new StringBuilder();
+
+                float xInicio = -1;
+                float xFim = -1;
+                float y = -1;
+                float altura = 0;
+                int pagina = 1;
+
+                for (CelulaPDF caractere : linha) {
+
+                    float xAtual = caractere.getX();
+
+                    if (textoBloco.length() > 0) {
+
+                        float distancia = xAtual - xFim;
+
+                        if (distancia > toleranciaEspaco) {
+
+                            blocos.add(new CelulaPDF(
+                                    textoBloco.toString(),
+                                    xInicio,
+                                    y,
+                                    xFim - xInicio,
+                                    altura,
+                                    pagina
+                            ));
+
+                            textoBloco.setLength(0);
+                        }
+                    }
+
+                    if (textoBloco.length() == 0) {
+                        xInicio = xAtual;
+                        y = caractere.getY();
+                        altura = 0;
+                        pagina = caractere.getPagina();
+                        xFim = xAtual;
+                    }
+
+                    textoBloco.append(caractere.getTexto());
+
+                    xFim = Math.max(
+                        xFim,
+                        xAtual + caractere.getLargura()
+                    );
+
+                    altura = Math.max(altura, caractere.getAltura());
+                }
+
+                if (textoBloco.length() > 0) {
+
+                    blocos.add(new CelulaPDF(
+                        textoBloco.toString(),
+                        xInicio,
+                        y,
+                        xFim - xInicio,
+                        altura,
+                        pagina
+                    ));
+                }
+            }
+
+            return blocos;
+        }
+
+        public ArrayList<ArrayList<Float>> getLinhasDePosicoes() {
+            return linhasDePosicoes;
+        }
         public ArrayList<CelulaPDF> getCelulasPDF() {
             return celulasPDF;
         }
+        public ArrayList<CelulaPDF> getCaracteresPDF() { return caracteresPDF; }
     }
 
     private static boolean verificardorDeNumero(String texto) {
