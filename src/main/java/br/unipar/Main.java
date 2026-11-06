@@ -62,65 +62,13 @@ public class Main {
             // remove o texto
             String textoRemovido = removedorDeTexto.getText(documentoPDF);
 
-            ArrayList<CelulaPDF> blocos =
-                    removedorDeTexto.agruparEmBlocos();
-
-            float larguraColuna = 10f;
-            float alturaLinha = 14f;
-
-            for (CelulaPDF bloco : blocos) {
-
-                int colunaExcel = (int) (bloco.getX() / larguraColuna);
-                int linhaExcel = (int) (bloco.getY() / alturaLinha);
-
-                System.out.println(
-                        "Texto: " + bloco.getTexto()
-                                + " | Linha Excel: " + linhaExcel
-                                + " | Coluna Excel: " + colunaExcel
-                );
-            }
+            ArrayList<CelulaPDF> blocos = removedorDeTexto.agruparEmBlocos();
 
             try (XSSFWorkbook excel = new XSSFWorkbook()) {
 
                 Sheet aba = excel.createSheet("Dados do PDF");
+                gerarExcelLayout(blocos, aba);
 
-                ArrayList<ArrayList<String>> linhasOrganizadas = removedorDeTexto.organizarLinhas();
-
-                for (int i = 0; i < linhasOrganizadas.size(); i++) {
-
-                    ArrayList<String> dadosLinha = linhasOrganizadas.get(i);
-
-                    Row linhaExcel = aba.createRow(i);
-
-                    for (int j = 0; j < dadosLinha.size(); j++) {
-
-                        Cell celulaExcel = linhaExcel.createCell(j);
-
-                        String valor = dadosLinha.get(j).trim();
-
-                        if (verificardorDeNumero(valor)) {
-
-                            double numero = Double.parseDouble(valor.replace(",", "."));
-
-                            celulaExcel.setCellValue(numero);
-
-                        } else {
-
-                            celulaExcel.setCellValue(valor);
-                        }
-                    }
-                }
-                // Ajusta automaticamente a largura das colunas
-                ArrayList<Float> larguras = removedorDeTexto.calcularLargurasCelulas();
-
-                for (int i = 0; i < larguras.size(); i++) {
-
-                    float larguraPDF = larguras.get(i);
-
-                    int larguraExcel = (int) (larguraPDF * 256 / 7);
-
-                    aba.setColumnWidth(i, Math.min(larguraExcel, 255 * 256));
-                }
                 // Salva o arquivo Excel
                 JFileChooser seletorSalvar = new JFileChooser();
 
@@ -588,6 +536,52 @@ public class Main {
 
         } catch (NumberFormatException e) {
             return false;
+        }
+    }
+
+    public static void gerarExcelLayout(
+            ArrayList<CelulaPDF> blocos,
+            Sheet aba) {
+
+        float larguraColuna = 10f;
+        float alturaLinha = 14f;
+
+        // Ajusta a largura das colunas para aproximadamente 10 pontos
+        int larguraExcel = (int) ((larguraColuna / 7f) * 256);
+
+        for (int i = 0; i < 100; i++) {
+            aba.setColumnWidth(i, larguraExcel);
+        }
+
+        // Ajusta a altura das linhas para 14 pontos
+        aba.setDefaultRowHeightInPoints(alturaLinha);
+
+        for (CelulaPDF bloco : blocos) {
+
+            int coluna = (int) (bloco.getX() / larguraColuna);
+            int linha = (int) (bloco.getY() / alturaLinha);
+
+            Row linhaExcel = aba.getRow(linha);
+
+            if (linhaExcel == null) {
+                linhaExcel = aba.createRow(linha);
+            }
+
+            Cell celulaExcel = linhaExcel.getCell(coluna);
+
+            if (celulaExcel == null) {
+                celulaExcel = linhaExcel.createCell(coluna);
+            }
+
+            String texto = bloco.getTexto().trim();
+
+            if (celulaExcel.getStringCellValue().isEmpty()) {
+                celulaExcel.setCellValue(texto);
+            } else {
+                celulaExcel.setCellValue(
+                        celulaExcel.getStringCellValue() + " " + texto
+                );
+            }
         }
     }
 
