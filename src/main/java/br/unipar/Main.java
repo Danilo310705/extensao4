@@ -117,34 +117,8 @@ public class Main {
             super();
         }
 
-        //tive que colocar a variavel fora, pois writeString reseta o valor dela
-        float yAnterior = -1;
-        private float xFinalAnterior = -1;
-        private StringBuilder celula = new StringBuilder();
-        private ArrayList<String> tabelaDeCelulas = new ArrayList<>();
-        private ArrayList<ArrayList<String>> tabelaLinhaDeCelulas = new ArrayList<>();
-        private ArrayList<Float> posicoesDasCelulas = new ArrayList<>();
-        private ArrayList<ArrayList<Float>> linhasDePosicoes = new ArrayList<>();
-        private float xInicioCelula = -1;
-        private ArrayList<CelulaPDF> celulasPDF = new ArrayList<>();
+
         private ArrayList<CelulaPDF> caracteresPDF = new ArrayList<>();
-
-        private float yInicioCelula = -1;
-        private float xFimCelula = -1;
-        private float alturaCelula = 0;
-        private int paginaCelula = 1;
-
-
-        @Override
-        protected void endPage(PDPage pagina) throws IOException {
-
-            finalizarLinha();
-
-            xFinalAnterior = -1;
-            yAnterior = -1;
-
-            super.endPage(pagina);
-        }
 
         @Override
         protected void writeString(
@@ -169,216 +143,11 @@ public class Main {
                         textPosition.getHeightDir(),
                         getCurrentPageNo()
                 );
-
                 caracteresPDF.add(novoCaractere);
-
-                float yAtual = textPosition.getYDirAdj();//getYDirAdj vai pegar o Y
-                float x = textPosition.getXDirAdj();//getYDirAdj vai pegar o x
-
-                float largura = textPosition.getWidthDirAdj();
-
-                if(yAnterior !=-1 && Math.abs(yAtual - yAnterior) > 2){
-//                    System.out.println("Célula: " + celula);
-                    finalizarLinha();
-
-                    //System.out.println("----nova linha----");
-                    xFinalAnterior = -1;
-                }
-
-                // Verifica se existe um espaço grande entre os caracteres
-                if (xFinalAnterior != -1) {
-
-                    float distancia = x - xFinalAnterior;
-                    //System.out.println("distancia" + distancia);
-
-                    if (distancia > 10 || distancia < -2) {
-//                        System.out.println("Célula: " + celula);
-                        finalizarCelula();
-
-                    }
-                }
-
-
-                if (celula.length() == 0) {
-
-                    xInicioCelula = x;
-                    yInicioCelula = yAtual;
-                    paginaCelula = getCurrentPageNo();
-
-                    alturaCelula = 0;
-                    xFimCelula = x;
-                }
-
-                celula.append(caractere);// Adiciona o caractere à célula atual
-
-                xFimCelula = Math.max(xFimCelula, x + largura);
-
-                alturaCelula = Math.max(
-                        alturaCelula,
-                        textPosition.getHeightDir()
-                );
-
-                //System.out.println("Texto: " + caractere + " X: " + x + " Y: " + yAtual );
-                //System.out.println("Texto: " + caractere + " Y: " + yAtual );
-
-                //vao salvar os valores atual para o proximo
-                xFinalAnterior = x + largura;
-                yAnterior = yAtual;
             }
-
             super.writeString(texto, posicoes);
         }
 
-        private void finalizarCelula() {
-
-            if (celula.length() > 0) {
-                tabelaDeCelulas.add(celula.toString());
-                posicoesDasCelulas.add(xInicioCelula);
-
-                // Calcula a largura ocupada pelo texto
-                float larguraTotal = xFimCelula - xInicioCelula;
-
-                // Cria o objeto com todas as informações
-                CelulaPDF novaCelula = new CelulaPDF(
-                    celula.toString(),
-                    xInicioCelula,
-                    yInicioCelula,
-                    larguraTotal,
-                    alturaCelula,
-                    paginaCelula
-                );
-
-                // Guardo o objeto na lista
-                celulasPDF.add(novaCelula);
-
-                // Limpo as variáveis para a próxima célula
-                celula.setLength(0);
-                xInicioCelula = -1;
-                yInicioCelula = -1;
-                xFimCelula = -1;
-                alturaCelula = 0;
-
-            }
-
-        }
-
-        private void finalizarLinha() {
-
-            finalizarCelula();
-
-            if (!tabelaDeCelulas.isEmpty()) {
-
-                tabelaLinhaDeCelulas.add(new ArrayList<>(tabelaDeCelulas));
-
-                linhasDePosicoes.add(new ArrayList<>(posicoesDasCelulas));
-
-                tabelaDeCelulas.clear();
-                posicoesDasCelulas.clear();
-            }
-        }
-
-        public ArrayList<Float> descobrirColunas() {
-
-            ArrayList<Float> colunas = new ArrayList<>();
-
-            float tolerancia = 10;
-
-            for (ArrayList<Float> linha : linhasDePosicoes) {
-
-                for (float x : linha) {
-
-                    boolean encontrouColuna = false;
-
-                    for (float coluna : colunas) {
-
-                        if (Math.abs(x - coluna) <= tolerancia) {
-                            encontrouColuna = true;
-                            break;
-                        }
-                    }
-
-                    if (!encontrouColuna) {
-                        colunas.add(x);
-                    }
-                }
-            }
-
-            colunas.sort(Float::compareTo);
-
-            return colunas;
-        }
-
-        public ArrayList<ArrayList<String>> organizarLinhas() {
-
-            ArrayList<Float> colunas = descobrirColunas();
-
-            ArrayList<ArrayList<String>> linhasOrganizadas = new ArrayList<>();
-
-            for (int i = 0; i < tabelaLinhaDeCelulas.size(); i++) {
-
-                ArrayList<String> textos = tabelaLinhaDeCelulas.get(i);
-
-                ArrayList<Float> posicoes = linhasDePosicoes.get(i);
-
-                ArrayList<String> novaLinha = new ArrayList<>();
-
-                for (int j = 0; j < colunas.size(); j++) {
-                    novaLinha.add("");
-                }
-
-                for (int j = 0; j < textos.size(); j++) {
-
-                    float x = posicoes.get(j);
-
-                    int colunaMaisProxima = -1;
-
-                    float menorDistancia = Float.MAX_VALUE;
-
-                    for (int k = 0; k < colunas.size(); k++) {
-
-                        float distancia = Math.abs(x - colunas.get(k));
-
-                        if (distancia < menorDistancia) {
-
-                            menorDistancia = distancia;
-
-                            colunaMaisProxima = k;
-                        }
-                    }
-
-                    if (colunaMaisProxima != -1) {
-                        novaLinha.set(colunaMaisProxima, textos.get(j));
-                    }
-                }
-
-                linhasOrganizadas.add(novaLinha);
-            }
-
-            return linhasOrganizadas;
-        }
-
-
-        public ArrayList<Float> calcularLargurasCelulas() {
-
-            ArrayList<Float> colunas = descobrirColunas();
-
-            ArrayList<Float> larguras = new ArrayList<>();
-
-            for (int i = 0; i < colunas.size() - 1; i++) {
-
-                float largura = colunas.get(i + 1) - colunas.get(i);
-
-                larguras.add(largura);
-            }
-
-            if (!larguras.isEmpty()) {
-                larguras.add(larguras.get(larguras.size() - 1));
-            } else if (!colunas.isEmpty()) {
-                larguras.add(60f);
-            }
-
-            return larguras;
-        }
         public ArrayList<ArrayList<CelulaPDF>> agruparPorLinha() {
 
             ArrayList<ArrayList<CelulaPDF>> linhas = new ArrayList<>();
@@ -393,7 +162,8 @@ public class Main {
 
                     float yReferencia = linha.get(0).getY();
 
-                    if (Math.abs(caractere.getY() - yReferencia) <= toleranciaY) {
+                    if (linha.get(0).getPagina() == caractere.getPagina()
+                            && Math.abs(caractere.getY() - yReferencia) <= toleranciaY) {
 
                         linha.add(caractere);
                         encontrouLinha = true;
@@ -404,9 +174,7 @@ public class Main {
                 if (!encontrouLinha) {
 
                     ArrayList<CelulaPDF> novaLinha = new ArrayList<>();
-
                     novaLinha.add(caractere);
-
                     linhas.add(novaLinha);
                 }
             }
@@ -543,14 +311,6 @@ public class Main {
 
             return colunas;
         }
-
-        public ArrayList<ArrayList<Float>> getLinhasDePosicoes() {
-            return linhasDePosicoes;
-        }
-        public ArrayList<CelulaPDF> getCelulasPDF() {
-            return celulasPDF;
-        }
-        public ArrayList<CelulaPDF> getCaracteresPDF() { return caracteresPDF; }
     }
 
     private static boolean verificardorDeNumero(String texto) {
