@@ -1,5 +1,6 @@
 package br.unipar;
 
+import lombok.NonNull;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -63,11 +64,14 @@ public class Main {
             String textoRemovido = removedorDeTexto.getText(documentoPDF);
 
             ArrayList<CelulaPDF> blocos = removedorDeTexto.agruparEmBlocos();
+            ArrayList<Float> colunasLayout = removedorDeTexto.descobrirColunasLayout();
 
             try (XSSFWorkbook excel = new XSSFWorkbook()) {
 
                 Sheet aba = excel.createSheet("Dados do PDF");
-                gerarExcelLayout(blocos, aba);
+                gerarExcelLayout(blocos, colunasLayout, aba);
+
+                ajustarLarguraColunas(aba, colunasLayout, blocos);
 
                 // Salva o arquivo Excel
                 JFileChooser seletorSalvar = new JFileChooser();
@@ -271,10 +275,6 @@ public class Main {
                 tabelaDeCelulas.clear();
                 posicoesDasCelulas.clear();
             }
-        }
-
-        public ArrayList<ArrayList<String>> getLinhas() {
-            return tabelaLinhaDeCelulas;
         }
 
         public ArrayList<Float> descobrirColunas() {
@@ -514,6 +514,35 @@ public class Main {
 
             return blocos;
         }
+        public ArrayList<Float> descobrirColunasLayout() {
+
+            ArrayList<CelulaPDF> blocos = agruparEmBlocos();
+            ArrayList<Float> colunas = new ArrayList<>();
+
+            float toleranciaX = 15f;
+
+            for (CelulaPDF bloco : blocos) {
+
+                float xAtual = bloco.getX();
+                boolean colunaEncontrada = false;
+
+                for (Float xColuna : colunas) {
+
+                    if (Math.abs(xAtual - xColuna) <= toleranciaX) {
+                        colunaEncontrada = true;
+                        break;
+                    }
+                }
+
+                if (!colunaEncontrada) {
+                    colunas.add(xAtual);
+                }
+            }
+
+            colunas.sort(Float::compareTo);
+
+            return colunas;
+        }
 
         public ArrayList<ArrayList<Float>> getLinhasDePosicoes() {
             return linhasDePosicoes;
@@ -539,48 +568,84 @@ public class Main {
         }
     }
 
-    public static void gerarExcelLayout(
-            ArrayList<CelulaPDF> blocos,
-            Sheet aba) {
-
-        float larguraColuna = 10f;
-        float alturaLinha = 14f;
-
-        // Ajusta a largura das colunas para aproximadamente 10 pontos
-        int larguraExcel = (int) ((larguraColuna / 7f) * 256);
-
-        for (int i = 0; i < 100; i++) {
-            aba.setColumnWidth(i, larguraExcel);
+    private static int colunaMaisProxima(float x, ArrayList<Float> colunas) {
+        int melhor = 0;
+        float menor = Float.MAX_VALUE;
+        for (int i = 0; i < colunas.size(); i++) {
+            float d = Math.abs(x - colunas.get(i));
+            if (d < menor) { menor = d; melhor = i; }
         }
+        return melhor;
+    }
 
-        // Ajusta a altura das linhas para 14 pontos
-        aba.setDefaultRowHeightInPoints(alturaLinha);
-
-        for (CelulaPDF bloco : blocos) {
-
-            int coluna = (int) (bloco.getX() / larguraColuna);
-            int linha = (int) (bloco.getY() / alturaLinha);
-
-            Row linhaExcel = aba.getRow(linha);
-
-            if (linhaExcel == null) {
-                linhaExcel = aba.createRow(linha);
-            }
-
-            Cell celulaExcel = linhaExcel.getCell(coluna);
-
-            if (celulaExcel == null) {
-                celulaExcel = linhaExcel.createCell(coluna);
-            }
-
-            String texto = bloco.getTexto().trim();
-
-            if (celulaExcel.getStringCellValue().isEmpty()) {
-                celulaExcel.setCellValue(texto);
+    // largura de cada coluna proporcional à distância real no PDF
+    private static void ajustarLarguraColunas(Sheet aba, ArrayList<Float> colunas,
+                                              ArrayList<CelulaPDF> blocos) {
+        for (int i = 0; i < colunas.size(); i++) {
+            float larguraPt;
+            if (i < colunas.size() - 1) {
+                larguraPt = colunas.get(i + 1) - colunas.get(i);
             } else {
-                celulaExcel.setCellValue(
-                        celulaExcel.getStringCellValue() + " " + texto
-                );
+                // última coluna: pega o bloco mais largo que começa nela
+                larguraPt = 40f;
+                for (CelulaPDF b : blocos) {
+                    if (colunaMaisProxima(b.getX(), colunas) == i) {
+                        larguraPt = Math.max(larguraPt, b.getLargura());
+                    }
+                }
+            }
+            // pt -> pixels (96/72) -> caracteres do Excel (~7 px cada)
+            double caracteres = (larguraPt * 96.0 / 72.0) / 7.0;
+            int largura = (int) Math.min(255 * 256, Math.max(2 * 256, caracteres * 256));
+            aba.setColumnWidth(i, largura);
+        }
+    }
+
+    public static void gerarExcelLayout(ArrayList<CelulaPDF> blocos,
+                                        ArrayList<Float> colunasLayout, Sheet aba) {
+        ArrayList<CelulaPDF> ordenados = new ArrayList<>(blocos);
+        ordenados.sort((a, b) -> {
+            int p = Integer.compare(a.getPagina(), b.getPagina());
+            return p != 0 ? p : Float.compare(a.getY(), b.getY());
+        });
+
+        int linhaAtual = -1;
+        float yLinha = -1;
+        int paginaAnterior = -1;
+
+        for (CelulaPDF bloco : ordenados) {
+            boolean novaPagina = bloco.getPagina() != paginaAnterior;
+            boolean novaLinha = novaPagina || Math.abs(bloco.getY() - yLinha) > 3f;
+
+            if (novaLinha) {
+                if (linhaAtual == -1) {
+                    linhaAtual = 0;
+                } else if (novaPagina) {
+                    linhaAtual += 2; // uma linha em branco entre páginas
+                } else {
+                    // 1 linha normal + linhas em branco proporcionais ao vão do PDF
+                    float vao = bloco.getY() - yLinha;
+                    linhaAtual += Math.max(1, Math.round(vao / 14f));
+                }
+                yLinha = bloco.getY();
+                paginaAnterior = bloco.getPagina();
+            }
+
+            int coluna = colunaMaisProxima(bloco.getX(), colunasLayout);
+
+            Row linhaExcel = aba.getRow(linhaAtual);
+            if (linhaExcel == null) linhaExcel = aba.createRow(linhaAtual);
+
+            Cell celula = linhaExcel.getCell(coluna);
+            if (celula == null) celula = linhaExcel.createCell(coluna);
+
+            // tira espaços repetidos (ex.: "R$            404,00")
+            String texto = bloco.getTexto().trim().replaceAll("\\s+", " ");
+
+            if (celula.getStringCellValue().isEmpty()) {
+                celula.setCellValue(texto);
+            } else {
+                celula.setCellValue(celula.getStringCellValue() + " " + texto);
             }
         }
     }
