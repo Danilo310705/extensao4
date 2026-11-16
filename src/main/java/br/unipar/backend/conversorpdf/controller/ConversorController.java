@@ -43,7 +43,7 @@ public class ConversorController {
 
     // POST http://localhost:8080/conversor/pdf-para-excel
     // Recebe o PDF como upload e devolve o .xlsx para download.
-    //  - @RequestParam("arquivo"): pega do formulário o campo chamado "arquivo"
+    //  - @RequestParam("  arquivo"): pega do formulário o campo chamado "arquivo"
     //    (o nome da chave no Postman precisa ser exatamente este);
     @PostMapping(value = "/pdf-para-excel", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<byte[]> converter(@RequestParam("arquivo") MultipartFile arquivo) {
