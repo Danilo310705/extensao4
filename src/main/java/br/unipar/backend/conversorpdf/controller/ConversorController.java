@@ -53,11 +53,9 @@ public class ConversorController {
         // então o código abaixo nem chega a rodar.
         ExcelGeradoDTO excel = conversorService.converterPdfParaExcel(arquivo);
 
-
         ContentDisposition disposicao = ContentDisposition.attachment()
             .filename(excel.nomeArquivo(), StandardCharsets.UTF_8)
             .build();
-
 
         return ResponseEntity.ok()
             .header(HttpHeaders.CONTENT_DISPOSITION, disposicao.toString())
