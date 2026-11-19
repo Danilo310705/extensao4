@@ -25,7 +25,6 @@ public class ConversorController {
     private static final MediaType TIPO_XLSX = MediaType.parseMediaType(
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
 
-    // O service que faz o trabalho de verdade. "final" = é definido uma vez, no construtor, e não troca mais.
     private final ConversorService conversorService;
 
     // Construtor com injeção de dependência: o Spring cria o ConversorService
@@ -35,7 +34,7 @@ public class ConversorController {
     }
 
     // GET http://localhost:8080/conversor/status
-    // Serve só para conferir se a API subiu. Responde com um texto simples.
+    // Serve só para conferir se a API subiu. Responde com um texto simples e simpatico.
     @GetMapping("/status")
     public String status() {
         return "API ta funfando, hehehe!";
@@ -44,7 +43,7 @@ public class ConversorController {
     // POST http://localhost:8080/conversor/pdf-para-excel
     // Recebe o PDF como upload e devolve o .xlsx para download.
     //  - @RequestParam("  arquivo"): pega do formulário o campo chamado "arquivo"
-    //    (o nome da chave no Postman precisa ser exatamente este);
+    //    é extemamente importante que seja exatamente "arquivo" se for diferente da erro e ele n puxa
     @PostMapping(value = "/pdf-para-excel", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<byte[]> converter(@RequestParam("arquivo") MultipartFile arquivo) {
 

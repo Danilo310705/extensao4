@@ -19,23 +19,18 @@ import java.util.ArrayList;
 
 @Service
 public class ConversorService {
-
     // Extensão que o arquivo enviado precisa ter. Fica numa constante para não repetir o texto ".pdf".
     private static final String EXTENSAO_PDF = ".pdf";
-
     // aqui ele vai recebe o PDF enviado pelo usuário e devolve o Excel pronto.
     public ExcelGeradoDTO converterPdfParaExcel(MultipartFile arquivo) {
 
         // confere se o arquivo existe e se é um .pdf.
         // Se não servir, lança ArquivoInvalidoException e o metodo para por aqui.
         validar(arquivo);
-
         try (PDDocument documentoPDF = Loader.loadPDF(arquivo.getBytes())) {
-
             // Cria um extrator novo a cada pedido: ele guarda os caracteres do PDF que está sendo lido,
             // então não pode ser compartilhado entre duas conversões ao mesmo tempo.
             ExtratorDeTexto extrator = new ExtratorDeTexto();
-
 
             // O texto que getText devolve não é usado, mas sem ela, o PDF nunca é percorrido e o Excel sairia vazio.
             extrator.getText(documentoPDF);
@@ -47,13 +42,12 @@ public class ConversorService {
             // (o texto está dentro de uma imagem, que o PDFBox não consegue ler).
             if (blocos.isEmpty()) {
                 throw new ArquivoInvalidoException(
-                        "Não encontrei texto neste PDF. Se ele for uma imagem/scan, lamento, nao posso ajudar no momento, espere pelas proximas atualizações.");
+                    "Não encontrei texto neste PDF. Se ele for uma imagem/scan, lamento, " +
+                    "nao posso ajudar no momento, espere pelas proximas atualizações.");
             }
-
             // Descobre as colunas do layout: as posições X (esquerda para a direita)
             // onde os blocos de texto costumam começar.
             ArrayList<Float> colunas = extrator.descobrirColunasLayout(blocos);
-
             // Monta o Excel na memória e devolve o arquivo como um vetor de bytes.
             byte[] conteudo = gerarExcel(blocos, colunas);
 
@@ -62,10 +56,10 @@ public class ConversorService {
 
         } catch (IOException e) {
             // Loader.loadPDF e getBytes lançam IOException quando o arquivo está corrompido,
-            // não é um PDF de verdade ou tem senha. Trocamos esse erro técnico por uma
-            // exceção nossa, com uma mensagem que o usuário entende (vira HTTP 400).
+            // não é um PDF de verdade ou tem senha.
             throw new ArquivoInvalidoException(
-                    "Não foi possível processar o PDF. Verifique se o arquivo é um PDF válido e sem senha.");
+                "Não foi possível processar o PDF. Verifique se o arquivo é um PDF válido e sem senha."
+            );
         }
     }
 
