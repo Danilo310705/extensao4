@@ -139,10 +139,7 @@ public class ExtratorDeTexto extends PDFTextStripper {
 
         // Trata uma linha de cada vez.
         for (ArrayList<CelulaPDF> linha : linhas) {
-
-
             StringBuilder textoBloco = new StringBuilder();
-
             float xInicio = -1;
             float xFim = -1;
             float y = -1;
@@ -151,7 +148,6 @@ public class ExtratorDeTexto extends PDFTextStripper {
 
             // Percorre os caracteres da linha, na ordem em que foram lidos.
             for (CelulaPDF caractere : linha) {
-
                 float xAtual = caractere.getX();
 
                 // Só faz sentido medir o espaço se já existe um bloco em andamento.

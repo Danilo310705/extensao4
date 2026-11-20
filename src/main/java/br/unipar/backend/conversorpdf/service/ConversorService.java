@@ -182,9 +182,7 @@ public class ConversorService {
 
     // Escreve cada bloco de texto na linha e na coluna certas da planilha
     // A coluna vem da posição X do bloco; a linha vem da posição Y
-    private static void gerarExcelLayout(ArrayList<CelulaPDF> blocos,
-                                         ArrayList<Float> colunasLayout, Sheet aba) {
-
+    private static void gerarExcelLayout(ArrayList<CelulaPDF> blocos,ArrayList<Float> colunasLayout, Sheet aba) {
         // Trabalha numa cópia da lista, para não bagunçar a ordem da lista original.
         // Depois ordena por página e, dentro da mesma página, de cima para baixo.
         // Em "p != 0 ? p : ...": se as páginas forem diferentes, a página decide; se forem iguais, o Y decide.
@@ -193,7 +191,6 @@ public class ConversorService {
             int p = Integer.compare(a.getPagina(), b.getPagina());
             return p != 0 ? p : Float.compare(a.getY(), b.getY());
         });
-
         int linhaAtual = -1;
         float yLinha = -1;
         int paginaAnterior = -1;
@@ -206,7 +203,6 @@ public class ConversorService {
 
             // Este bloco pertence a outra linha do Excel se mudou a página
             // ou se o Y dele está a mais de 3 pontos do Y da linha atual
-
             boolean novaLinha = novaPagina || Math.abs(bloco.getY() - yLinha) > 3f;
 
             if (novaLinha) {
